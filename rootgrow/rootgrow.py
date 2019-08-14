@@ -16,87 +16,68 @@
 # along with rootgrow.  If not, see <http://www.gnu.org/licenses/>
 #
 import os
-import re
+import subprocess
 import syslog
 
-split_dev = re.compile('([a-z/]*)(\d*)')
-mounts = open('/proc/mounts', 'r').readlines()
+from rootgrow.resizefs import resize_fs
 
 
-def get_mount_point(device):
-    for mount in mounts:
-        if mount.startswith(device):
-            return mount.split(' ')[1]
+def get_root_device():
+    result = subprocess.run(
+        ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
+        stdout=subprocess.PIPE
+    )
+    return result.stdout.strip().decode()
 
 
-def is_mount_read_only(mountpoint):
-    for mount in mounts:
-        mount_values = mount.split(' ')
-        if mount_values[1] == mountpoint:
-            mount_opts = mount_values[3].split(',')
-            return 'ro' in mount_opts
+def get_root_filesystem_type(root_device):
+    result = subprocess.run(
+        ['blkid', '-s', 'TYPE', '-o', 'value', root_device],
+        stdout=subprocess.PIPE
+    )
+    return result.stdout.strip().decode()
 
 
-def resize_fs(fs_type, device):
-    if fs_type.startswith('ext'):
-        cmd = 'resize2fs {0}'.format(device)
-        syslog.syslog(
-            syslog.LOG_INFO, 'Resizing: "{0}"'.format(cmd)
-        )
-        os.system(cmd)
-    elif fs_type == 'xfs':
-        mnt_point = get_mount_point(device)
-        cmd = 'xfs_growfs %s' % mnt_point
-        syslog.syslog(
-            syslog.LOG_INFO, 'Resizing: "{0}"'.format(cmd)
-        )
-        os.system(cmd)
-    elif fs_type == 'btrfs':
-        mnt_point = get_mount_point(device)
-        # If the volume is read-only, the resize operation will fail even
-        # though it's still probably wanted to do the resize. A feasible
-        # work-around is to use snapper's .snapshots subdir (if exists)
-        # instead of the volume path for the resize operation.
-        if is_mount_read_only(mnt_point):
-            if os.path.isdir('{}/.snapshots'.format(mnt_point)):
-                cmd = 'btrfs filesystem resize max {}/.snapshots'.format(
-                    mnt_point)
-            else:
-                syslog.syslog(
-                    syslog.LOG_ERR,
-                    "cannot resize read-only btrfs without snapshots"
-                )
-                return
-        else:
-            cmd = 'btrfs filesystem resize max {}'.format(mnt_point)
-        syslog.syslog(
-            syslog.LOG_INFO, 'Resizing: "{0}"'.format(cmd)
-        )
-        os.system(cmd)
+def get_disk_device_from_root(root_device):
+    result = subprocess.run(
+        ['lsblk', '-p', '-n', '-r', '-s', '-o', 'NAME,TYPE', root_device],
+        stdout=subprocess.PIPE
+    )
+    for device_info in result.stdout.decode().split(os.linesep):
+        device_list = device_info.split()
+        if device_list and device_list[1] == 'disk':
+            return device_list[0]
+
+
+def get_partition_id_from_root(disk_device, root_device):
+    result = subprocess.run(
+        ['lsblk', '-p', '-n', '-r', '-o', 'NAME', disk_device],
+        stdout=subprocess.PIPE
+    )
+    partition_index = 0
+    for device in result.stdout.decode().split(os.linesep):
+        if device:
+            if device == root_device:
+                return partition_index
+            partition_index = partition_index + 1
 
 
 def main():
-    for mount in mounts:
-        if ' / ' in mount:
-            mount_dev = mount.split(' ')[0]
-            fs = mount.split(' ')[2]
-            try:
-                dev, partition = split_dev.match(mount_dev).groups()
-            except Exception:
-                syslog.syslog(
-                    syslog.LOG_ERR, 'match exception for "{0}"'.format(mount)
-                )
-                break
-            if dev and partition:
-                cmd = '/usr/sbin/growpart {0} {1}'.format(dev, partition)
-                syslog.syslog(
-                    syslog.LOG_INFO,
-                    'Executing: "%s"' % cmd
-                )
-                os.system(cmd)
-                resize_fs(fs, mount_dev)
-            else:
-                syslog.syslog(
-                    syslog.LOG_ERR,
-                    'could not match device and partition in "%s"' % mount
-                )
+    try:
+        root_device = get_root_device()
+        if root_device:
+            root_fs = get_root_filesystem_type(root_device)
+            root_disk = get_disk_device_from_root(root_device)
+            root_part = get_partition_id_from_root(root_disk, root_device)
+            growpart = '/usr/sbin/growpart {0} {1}'.format(
+                root_disk, root_part
+            )
+            syslog.syslog(
+                syslog.LOG_INFO, 'Executing: "{0}"'.format(growpart)
+            )
+            os.system(growpart)
+            resize_fs(root_fs, root_device)
+    except Exception as issue:
+        syslog.syslog(
+            syslog.LOG_ERR, 'rootgrow failed with: {0}'.format(issue)
+        )

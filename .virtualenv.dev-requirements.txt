@@ -4,6 +4,7 @@
 pytest
 pytest-cov
 coverage
+mock
 
 # Python style guide checker
 flake8
