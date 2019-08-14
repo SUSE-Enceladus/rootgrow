@@ -1,0 +1,10 @@
+commit a8ad360100674175b66e9783fc8f8cfaa28d744f
+Author:     Marcus Schäfer <ms@suse.de>
+AuthorDate: Fri Jul 26 16:31:34 2019 +0200
+Commit:     Marcus Schäfer <ms@suse.de>
+CommitDate: Fri Jul 26 16:31:34 2019 +0200
+
+    Added license information
+    
+    Use the same license as used in the reference package
+    on Devel:PubCloud/growpart

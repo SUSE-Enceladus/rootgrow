@@ -29,6 +29,7 @@ BuildRequires:    python3-devel
 BuildRequires:    python3-setuptools
 BuildRequires:    systemd-rpm-macros
 Requires:         python3-setuptools
+Requires:         util-linux
 Requires(preun):  systemd
 Requires(postun): systemd
 BuildArch:        noarch
