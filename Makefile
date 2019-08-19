@@ -12,16 +12,16 @@ build: check test
 	# restore original setup.py backed up from sed
 	mv setup.pye setup.py
 	# provide rpm source tarball
-	mv dist/rootgrow-${version}.tar.gz dist/rootgrow.tar.gz
+	mv dist/rootgrow-${version}.tar.gz dist/growpart-rootgrow.tar.gz
 	# update rpm changelog using reference file
 	helper/update_changelog.py --since package/rootgrow.changes > \
-		dist/rootgrow.changes
+		dist/growpart-rootgrow.changes
 	helper/update_changelog.py --file package/rootgrow.changes >> \
-		dist/rootgrow.changes
+		dist/growpart-rootgrow.changes
 	# update package version in spec file
 	cat package/rootgrow-spec-template \
 		| sed -e s'@%%VERSION@${version}@' \
-		> dist/rootgrow.spec
+		> dist/growpart-rootgrow.spec
 
 .PHONY: test
 test:
