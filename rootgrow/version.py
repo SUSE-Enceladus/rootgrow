@@ -18,4 +18,4 @@
 """
 Global version information used in rootgrow and the package
 """
-__VERSION__ = '0.0.2'
+__VERSION__ = '1.0.0'
