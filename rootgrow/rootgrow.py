@@ -23,39 +23,72 @@ from rootgrow.resizefs import resize_fs
 
 
 def get_root_device():
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
-    return result.stdout.strip().decode()
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine root partition {}'.format(err_msg)
+        )
+    return stdout_data.strip().decode()
 
 
 def get_root_filesystem_type(root_device):
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['blkid', '-s', 'TYPE', '-o', 'value', root_device],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
-    return result.stdout.strip().decode()
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine root filesystem on {1} {2}'.format(
+                root_device, err_msg)
+        )
+    return stdout_data.strip().decode()
 
 
 def get_disk_device_from_root(root_device):
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['lsblk', '-p', '-n', '-r', '-s', '-o', 'NAME,TYPE', root_device],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
-    for device_info in result.stdout.decode().split(os.linesep):
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine root disk from {1} {2}'.format(
+                root_device, err_msg
+            )
+        )
+    for device_info in stdout_data.decode().split(os.linesep):
         device_list = device_info.split()
         if device_list and device_list[1] == 'disk':
             return device_list[0]
 
 
 def get_partition_id_from_root(disk_device, root_device):
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['lsblk', '-p', '-n', '-r', '-o', 'NAME', disk_device],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine root partition index {}'.format(
+                err_msg
+            )
+        )
     partition_index = 0
-    for device in result.stdout.decode().split(os.linesep):
+    for device in stdout_data.decode().split(os.linesep):
         if device:
             if device == root_device:
                 return partition_index

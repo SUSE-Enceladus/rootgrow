@@ -21,19 +21,37 @@ import subprocess
 
 
 def get_mount_point(device):
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['findmnt', '-n', '-f', '-o', 'TARGET', device],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
-    return result.stdout.strip().decode()
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine mount point for {1} {2}'.format(
+                device, err_msg
+            )
+        )
+    return stdout_data.strip().decode()
 
 
 def get_mount_options(device):
-    result = subprocess.run(
+    proc = subprocess.Popen(
         ['findmnt', '-n', '-f', '-o', 'OPTIONS', device],
-        stdout=subprocess.PIPE
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
-    return result.stdout.decode().strip().split(',')
+    stdout_data, stderr_data = proc.communicate()
+    err_msg = stderr_data.decode()
+    if err_msg:
+        raise Exception(
+            'Unable to determine mount options for {1} {2}'.format(
+                device, err_msg
+            )
+        )
+    return stdout_data.decode().strip().split(',')
 
 
 def resize_fs(fs_type, device):
