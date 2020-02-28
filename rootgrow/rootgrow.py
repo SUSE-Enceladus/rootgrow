@@ -34,7 +34,6 @@ def get_root_device():
         raise Exception(
             'Unable to determine root partition {}'.format(err_msg)
         )
-    
     return stdout_data.strip().decode()
 
 
@@ -51,7 +50,6 @@ def get_root_filesystem_type(root_device):
             'Unable to determine root filesystem on {1} {2}'.format(
                 root_device, err_msg)
         )
-    
     return stdout_data.strip().decode()
 
 
@@ -66,8 +64,9 @@ def get_disk_device_from_root(root_device):
     if err_msg:
         raise Exception(
             'Unable to determine root disk from {1} {2}'.format(
-                root_device, err_msg)
-    )
+                root_device, err_msg
+            )
+        )
     for device_info in stdout_data.decode().split(os.linesep):
         device_list = device_info.split()
         if device_list and device_list[1] == 'disk':
@@ -84,8 +83,10 @@ def get_partition_id_from_root(disk_device, root_device):
     err_msg = stderr_data.decode()
     if err_msg:
         raise Exception(
-            'Unable to determine root partition index {}'.format(err_msg)
-    )
+            'Unable to determine root partition index {}'.format(
+                err_msg
+            )
+        )
     partition_index = 0
     for device in stdout_data.decode().split(os.linesep):
         if device:

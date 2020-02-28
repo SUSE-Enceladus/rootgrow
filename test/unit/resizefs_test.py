@@ -1,5 +1,5 @@
 import unittest
-
+from pytest import raises
 from mock import (
     patch, Mock, call
 )
@@ -94,15 +94,15 @@ class TestResizeFs(unittest.TestCase):
     @patch('subprocess.Popen')
     def test_get_mount_point_error(self, mock_subprocess_popen):
         findmnt_mnt = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        findmnt_mnt.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
+        mock_subprocess_popen.return_value = findmnt_mnt
+        findmnt_mnt.communicate.return_value = (b'', b'error')
+        with raises(Exception):
             get_mount_point('/foo')
-   
+
     @patch('subprocess.Popen')
     def test_get_mount_options_error(self, mock_subprocess_popen):
         findmnt_mnt = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        findmnt_mnt.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
+        mock_subprocess_popen.return_value = findmnt_mnt
+        findmnt_mnt.communicate.return_value = (b'', b'error')
+        with raises(Exception):
             get_mount_options('/foo')

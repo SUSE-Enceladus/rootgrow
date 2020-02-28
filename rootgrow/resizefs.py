@@ -33,8 +33,7 @@ def get_mount_point(device):
             'Unable to determine mount point for {1} {2}'.format(
                 device, err_msg
             )
-    )
-    
+        )
     return stdout_data.strip().decode()
 
 
@@ -51,8 +50,7 @@ def get_mount_options(device):
             'Unable to determine mount options for {1} {2}'.format(
                 device, err_msg
             )
-    )
-    
+        )
     return stdout_data.decode().strip().split(',')
 
 

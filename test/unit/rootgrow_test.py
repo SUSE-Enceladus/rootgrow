@@ -1,6 +1,6 @@
 import unittest
 import syslog
-
+from pytest import raises
 from mock import (
     patch, Mock, call
 )
@@ -26,8 +26,12 @@ class TestRootGrow(unittest.TestCase):
             b'/dev/sda3 part\n/dev/sda disk', b'')}
         root_disk.configure_mock(**attrs)
         root_part = Mock()
-        attrs = {'communicate.return_value': (
-            b'/dev/sda\n/dev/sda1\n/dev/sda2\n/dev/sda3\n/dev/sda4', b'')}
+        attrs = {
+            'communicate.return_value': (
+                b'/dev/sda\n/dev/sda1\n/dev/sda2\n/dev/sda3\n/dev/sda4',
+                b''
+            )
+        }
         root_part.configure_mock(**attrs)
         mock_subprocess_popen.side_effect = [
             root_device, root_fs, root_disk, root_part
@@ -50,7 +54,10 @@ class TestRootGrow(unittest.TestCase):
                 stdout=-1, stderr=-1
             ),
             call(
-                ['lsblk', '-p', '-n', '-r', '-o', 'NAME', '/dev/sda'],
+                [
+                    'lsblk', '-p', '-n', '-r', '-o',
+                    'NAME', '/dev/sda'
+                ],
                 stdout=-1, stderr=-1
             )
         ]
@@ -68,35 +75,45 @@ class TestRootGrow(unittest.TestCase):
             syslog.LOG_ERR, 'rootgrow failed with: error'
         )
 
-
     @patch('subprocess.Popen')
     def test_get_root_device_error(self, mock_subprocess_popen):
         findmnt_mnt = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        findmnt_mnt.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
+        mock_subprocess_popen.return_value = findmnt_mnt
+        findmnt_mnt.communicate.return_value = (b'', b'error')
+        with raises(Exception):
             get_root_device()
 
     @patch('subprocess.Popen')
     def test_get_root_filesystem_type_error(self, mock_subprocess_popen):
         root_fs = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        root_fs.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
+        mock_subprocess_popen.return_value = root_fs
+        root_fs.communicate.return_value = (b'ext4', b'')
+        assert get_root_filesystem_type('/dev/foo') == 'ext4'
+        root_fs.communicate.return_value = (b'', b'error')
+        with raises(Exception):
             get_root_filesystem_type('/dev/foo')
 
     @patch('subprocess.Popen')
     def test_disk_device_from_root_error(self, mock_subprocess_popen):
         device = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        device.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
-            get_disk_device_from_root('/dev/foo')
+        mock_subprocess_popen.return_value = device
+        device.communicate.return_value = (b'/dev/sda disk', b'')
+        assert get_disk_device_from_root('/dev/sda1') == '/dev/sda'
+        device.communicate.return_value = (b'', b'error')
+        with raises(Exception):
+            get_disk_device_from_root('/dev/sda1')
 
     @patch('subprocess.Popen')
     def test_get_partition_id_from_root_error(self, mock_subprocess_popen):
         part_id = Mock()
-        attrs = {'communicate.return_value': (b'', b'error')}
-        part_id.configure_mock(**attrs)
-        with self.assertRaises(Exception) as context:
-            get_partition_id_from_root('/dev/foo', '/dev/foo1')
+        mock_subprocess_popen.return_value = part_id
+        part_id.communicate.return_value = (
+            b'/dev/sda\n/dev/sda1',
+            b''
+        )
+        assert get_partition_id_from_root('/dev/sda', '/dev/sda1') == 1
+        part_id.communicate.return_value = (
+            b'', b'error'
+        )
+        with raises(Exception):
+            get_partition_id_from_root('/dev/sda', '/dev/sda1')
