@@ -30,8 +30,9 @@ def get_mount_point(device):
     err_msg = stderr_data.decode()
     if err_msg:
         raise Exception(
-            'Unable to determine mount point for {1} {2}'.format(
-                device, err_msg
+            'Unable to determine mount point for {device} {msg}'.format(
+                device=device,
+                msg=err_msg
             )
         )
     return stdout_data.strip().decode()
@@ -47,8 +48,9 @@ def get_mount_options(device):
     err_msg = stderr_data.decode()
     if err_msg:
         raise Exception(
-            'Unable to determine mount options for {1} {2}'.format(
-                device, err_msg
+            'Unable to determine mount options for {device} {msg}'.format(
+                device=device,
+                msg=err_msg
             )
         )
     return stdout_data.decode().strip().split(',')
