@@ -90,12 +90,14 @@ def get_partition_id_from_root(disk_device, root_device):
                 err_msg
             )
         )
-    partition_index = 0
+    partition_index = ''
     for device in stdout_data.decode().split(os.linesep):
         if device:
             if device == root_device:
-                return partition_index
-            partition_index = partition_index + 1
+                for c in reversed(device):
+                    if c.isdigit():
+                        partition_index = c + partition_index
+                return int(partition_index)
 
 
 def main():
