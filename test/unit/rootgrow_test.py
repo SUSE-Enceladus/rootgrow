@@ -108,10 +108,10 @@ class TestRootGrow(unittest.TestCase):
         part_id = Mock()
         mock_subprocess_popen.return_value = part_id
         part_id.communicate.return_value = (
-            b'/dev/sda\n/dev/sda1',
+            b'/dev/sda\n/dev/sda1\n/dev/sda4\n/dev/sda10',
             b''
         )
-        assert get_partition_id_from_root('/dev/sda', '/dev/sda1') == 1
+        assert get_partition_id_from_root('/dev/sda', '/dev/sda10') == 10
         part_id.communicate.return_value = (
             b'', b'error'
         )
