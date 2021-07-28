@@ -117,3 +117,14 @@ class TestRootGrow(unittest.TestCase):
         )
         with raises(Exception):
             get_partition_id_from_root('/dev/sda', '/dev/sda1')
+
+    @patch('subprocess.Popen')
+    def test_get_partition_id_from_root_error2(self, mock_subprocess_popen):
+        part_id = Mock()
+        mock_subprocess_popen.return_value = part_id
+        part_id.communicate.return_value = (
+            b'/dev/sda\n/dev/foo\n',
+            b''
+        )
+        with raises(Exception):
+            get_partition_id_from_root('/dev/sda', '/dev/sda1')
