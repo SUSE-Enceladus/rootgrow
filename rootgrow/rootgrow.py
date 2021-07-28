@@ -97,7 +97,9 @@ def get_partition_id_from_root(disk_device, root_device):
                 for c in reversed(device):
                     if c.isdigit():
                         partition_index = c + partition_index
-                return int(partition_index)
+                    else:
+                        return int(partition_index)
+    raise Exception('Unable to determine root partition index')
 
 
 def main():
