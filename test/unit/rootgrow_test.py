@@ -66,6 +66,67 @@ class TestRootGrow(unittest.TestCase):
             call('resize2fs /dev/sda3')
         ]
 
+    @patch('os.system')
+    @patch('subprocess.Popen')
+    def test_rootgrow_main_nvme(self, mock_subprocess_popen, mock_os_system):
+        root_device = Mock()
+        attrs = {'communicate.return_value': (b'/dev/nvme0n1p3', b'')}
+        root_device.configure_mock(**attrs)
+        root_fs = Mock()
+        attrs = {'communicate.return_value': (b'xfs', b'')}
+        root_fs.configure_mock(**attrs)
+        root_disk = Mock()
+        attrs = {'communicate.return_value': (
+            b'/dev/nvme0n1p3 part\n/dev/nvme0n1 disk', b'')}
+        root_disk.configure_mock(**attrs)
+        root_part = Mock()
+        attrs = {
+            'communicate.return_value': (
+                b'/dev/nvme0n1\n/dev/nvme0n1p3\n/dev/nvme0n1p2\n/dev/nvme0n1p1',
+                b''
+            )
+        }
+        root_part.configure_mock(**attrs)
+        root_fs_mnt = Mock()
+        attrs = {'communicate.return_value': (b'/', b'')}
+        root_fs_mnt.configure_mock(**attrs)
+        mock_subprocess_popen.side_effect = [
+            root_device, root_fs, root_disk, root_part, root_fs_mnt
+        ]
+        main()
+        assert mock_subprocess_popen.call_args_list == [
+            call(
+                ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                ['blkid', '-s', 'TYPE', '-o', 'value', '/dev/nvme0n1p3'],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                [
+                    'lsblk', '-p', '-n', '-r', '-s', '-o',
+                    'NAME,TYPE', '/dev/nvme0n1p3'
+                ],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                [
+                    'lsblk', '-p', '-n', '-r', '-o',
+                    'NAME', '/dev/nvme0n1'
+                ],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                ['findmnt', '-n', '-f', '-o', 'TARGET', '/dev/nvme0n1p3'],
+                stdout=-1, stderr=-1
+            )
+        ]
+        assert mock_os_system.call_args_list == [
+            call('/usr/sbin/growpart /dev/nvme0n1 3'),
+            call('xfs_growfs /')
+        ]
+
     @patch('subprocess.Popen')
     @patch('syslog.syslog')
     def test_rootgrow_main_raises(self, mock_syslog, mock_subprocess_popen):
