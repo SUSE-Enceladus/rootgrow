@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import platform
 
 try:
     from setuptools import setup
