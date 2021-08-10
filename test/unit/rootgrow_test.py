@@ -23,18 +23,10 @@ class TestRootGrow(unittest.TestCase):
         root_fs.configure_mock(**attrs)
         root_disk = Mock()
         attrs = {'communicate.return_value': (
-            b'/dev/sda3 part\n/dev/sda disk', b'')}
+            b'/dev/sda', b'')}
         root_disk.configure_mock(**attrs)
-        root_part = Mock()
-        attrs = {
-            'communicate.return_value': (
-                b'/dev/sda\n/dev/sda1\n/dev/sda2\n/dev/sda3\n/dev/sda4',
-                b''
-            )
-        }
-        root_part.configure_mock(**attrs)
         mock_subprocess_popen.side_effect = [
-            root_device, root_fs, root_disk, root_part
+            root_device, root_fs, root_disk
         ]
         main()
         assert mock_subprocess_popen.call_args_list == [
@@ -48,15 +40,8 @@ class TestRootGrow(unittest.TestCase):
             ),
             call(
                 [
-                    'lsblk', '-p', '-n', '-r', '-s', '-o',
-                    'NAME,TYPE', '/dev/sda3'
-                ],
-                stdout=-1, stderr=-1
-            ),
-            call(
-                [
-                    'lsblk', '-p', '-n', '-r', '-o',
-                    'NAME', '/dev/sda'
+                    'lsblk', '-n', '-p', '-o',
+                    'PKNAME', '/dev/sda3'
                 ],
                 stdout=-1, stderr=-1
             )
@@ -77,21 +62,13 @@ class TestRootGrow(unittest.TestCase):
         root_fs.configure_mock(**attrs)
         root_disk = Mock()
         attrs = {'communicate.return_value': (
-            b'/dev/nvme0n1p3 part\n/dev/nvme0n1 disk', b'')}
+            b'/dev/nvme0n1', b'')}
         root_disk.configure_mock(**attrs)
-        root_part = Mock()
-        attrs = {
-            'communicate.return_value': (
-                b'/dev/nvme0n1\n/dev/nvme0n1p3\n/dev/nvme0n1p2\n/dev/nvme0n1p1',
-                b''
-            )
-        }
-        root_part.configure_mock(**attrs)
         root_fs_mnt = Mock()
         attrs = {'communicate.return_value': (b'/', b'')}
         root_fs_mnt.configure_mock(**attrs)
         mock_subprocess_popen.side_effect = [
-            root_device, root_fs, root_disk, root_part, root_fs_mnt
+            root_device, root_fs, root_disk, root_fs_mnt
         ]
         main()
         assert mock_subprocess_popen.call_args_list == [
@@ -105,15 +82,8 @@ class TestRootGrow(unittest.TestCase):
             ),
             call(
                 [
-                    'lsblk', '-p', '-n', '-r', '-s', '-o',
-                    'NAME,TYPE', '/dev/nvme0n1p3'
-                ],
-                stdout=-1, stderr=-1
-            ),
-            call(
-                [
-                    'lsblk', '-p', '-n', '-r', '-o',
-                    'NAME', '/dev/nvme0n1'
+                    'lsblk', '-n', '-p', '-o',
+                    'PKNAME', '/dev/nvme0n1p3'
                 ],
                 stdout=-1, stderr=-1
             ),
@@ -158,34 +128,12 @@ class TestRootGrow(unittest.TestCase):
     def test_disk_device_from_root_error(self, mock_subprocess_popen):
         device = Mock()
         mock_subprocess_popen.return_value = device
-        device.communicate.return_value = (b'/dev/sda disk', b'')
+        device.communicate.return_value = (b'/dev/sda', b'')
         assert get_disk_device_from_root('/dev/sda1') == '/dev/sda'
         device.communicate.return_value = (b'', b'error')
         with raises(Exception):
             get_disk_device_from_root('/dev/sda1')
 
-    @patch('subprocess.Popen')
-    def test_get_partition_id_from_root_error(self, mock_subprocess_popen):
-        part_id = Mock()
-        mock_subprocess_popen.return_value = part_id
-        part_id.communicate.return_value = (
-            b'/dev/sda\n/dev/sda1\n/dev/sda4\n/dev/sda10',
-            b''
-        )
-        assert get_partition_id_from_root('/dev/sda', '/dev/sda10') == 10
-        part_id.communicate.return_value = (
-            b'', b'error'
-        )
-        with raises(Exception):
-            get_partition_id_from_root('/dev/sda', '/dev/sda1')
-
-    @patch('subprocess.Popen')
-    def test_get_partition_id_from_root_error2(self, mock_subprocess_popen):
-        part_id = Mock()
-        mock_subprocess_popen.return_value = part_id
-        part_id.communicate.return_value = (
-            b'/dev/sda\n/dev/foo\n',
-            b''
-        )
-        with raises(Exception):
-            get_partition_id_from_root('/dev/sda', '/dev/sda1')
+    def test_get_partition_id_from_root(self):
+        assert get_partition_id_from_root('/dev/sda10') == 10
+        assert get_partition_id_from_root('/dev/nvme0n1p3') == 3
