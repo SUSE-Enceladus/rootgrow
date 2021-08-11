@@ -75,7 +75,10 @@ def get_disk_device_from_root(root_device):
 
 
 def get_partition_id_from_root(root_device):
-    partition_index = re.match('.*?([0-9]+)$', root_device).group(1)
+    # The ? makes the .* less "greedy". Thus all trailing ints
+    # are captured by the group. Otherwise the group would only
+    # capture the final trailing int.
+    partition_index = re.match('^.*?(\d+)$', root_device).group(1)
     return int(partition_index)
 
 
