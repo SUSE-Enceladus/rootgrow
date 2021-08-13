@@ -18,6 +18,7 @@
 import os
 import subprocess
 import syslog
+import re
 
 from rootgrow.resizefs import resize_fs
 
@@ -57,7 +58,7 @@ def get_root_filesystem_type(root_device):
 
 def get_disk_device_from_root(root_device):
     proc = subprocess.Popen(
-        ['lsblk', '-p', '-n', '-r', '-s', '-o', 'NAME,TYPE', root_device],
+        ['lsblk', '-n', '-p', '-o', 'PKNAME', root_device],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
@@ -70,36 +71,15 @@ def get_disk_device_from_root(root_device):
                 msg=err_msg
             )
         )
-    for device_info in stdout_data.decode().split(os.linesep):
-        device_list = device_info.split()
-        if device_list and device_list[1] == 'disk':
-            return device_list[0]
+    return stdout_data.strip().decode()
 
 
-def get_partition_id_from_root(disk_device, root_device):
-    proc = subprocess.Popen(
-        ['lsblk', '-p', '-n', '-r', '-o', 'NAME', disk_device],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    stdout_data, stderr_data = proc.communicate()
-    err_msg = stderr_data.decode()
-    if err_msg:
-        raise Exception(
-            'Unable to determine root partition index {}'.format(
-                err_msg
-            )
-        )
-    partition_index = ''
-    for device in stdout_data.decode().split(os.linesep):
-        if device:
-            if device == root_device:
-                for c in reversed(device):
-                    if c.isdigit():
-                        partition_index = c + partition_index
-                    else:
-                        return int(partition_index)
-    raise Exception('Unable to determine root partition index')
+def get_partition_id_from_root(root_device):
+    # The ? makes the .* less "greedy". Thus all trailing ints
+    # are captured by the group. Otherwise the group would only
+    # capture the final trailing int.
+    partition_index = re.match('^.*?(\d+)$', root_device).group(1)
+    return int(partition_index)
 
 
 def main():
@@ -108,7 +88,7 @@ def main():
         if root_device:
             root_fs = get_root_filesystem_type(root_device)
             root_disk = get_disk_device_from_root(root_device)
-            root_part = get_partition_id_from_root(root_disk, root_device)
+            root_part = get_partition_id_from_root(root_device)
             growpart = '/usr/sbin/growpart {0} {1}'.format(
                 root_disk, root_part
             )
