@@ -31,7 +31,7 @@ class TestRootGrow(unittest.TestCase):
         main()
         assert mock_subprocess_popen.call_args_list == [
             call(
-                ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
+                ['findmnt', '-v', '-n', '-f', '-o', 'SOURCE', '/'],
                 stdout=-1, stderr=-1
             ),
             call(
@@ -73,7 +73,7 @@ class TestRootGrow(unittest.TestCase):
         main()
         assert mock_subprocess_popen.call_args_list == [
             call(
-                ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
+                ['findmnt', '-v', '-n', '-f', '-o', 'SOURCE', '/'],
                 stdout=-1, stderr=-1
             ),
             call(
@@ -95,6 +95,63 @@ class TestRootGrow(unittest.TestCase):
         assert mock_os_system.call_args_list == [
             call('/usr/sbin/growpart /dev/nvme0n1 3'),
             call('xfs_growfs /')
+        ]
+
+    @patch('os.system')
+    @patch('subprocess.Popen')
+    def test_rootgrow_main_btrfs(self, mock_subprocess_popen, mock_os_system):
+        root_device = Mock()
+        attrs = {'communicate.return_value': (b'/dev/sda3', b'')}
+        root_device.configure_mock(**attrs)
+        root_fs = Mock()
+        attrs = {'communicate.return_value': (b'btrfs', b'')}
+        root_fs.configure_mock(**attrs)
+        root_disk = Mock()
+        attrs = {'communicate.return_value': (
+            b'/dev/sda', b'')}
+        root_disk.configure_mock(**attrs)
+        root_fs_mnt = Mock()
+        attrs = {'communicate.return_value': (b'/', b'')}
+        root_fs_mnt.configure_mock(**attrs)
+        root_fs_opts = Mock()
+        attrs = {'communicate.return_value': (
+            b'relatime,space_cache',
+            b''
+        )}
+        root_fs_opts.configure_mock(**attrs)
+        mock_subprocess_popen.side_effect = [
+            root_device, root_fs, root_disk, root_fs_mnt, root_fs_opts
+        ]
+        main()
+        assert mock_subprocess_popen.call_args_list == [
+            call(
+                ['findmnt', '-v', '-n', '-f', '-o', 'SOURCE', '/'],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                ['blkid', '-s', 'TYPE', '-o', 'value', '/dev/sda3'],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                [
+                    'lsblk', '-n', '-p', '-o',
+                    'PKNAME', '/dev/sda3'
+                ],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                ['findmnt', '-n', '-f', '-o', 'TARGET', '/dev/sda3'],
+                stdout=-1, stderr=-1
+            ),
+            call(
+                ['findmnt', '-n', '-f', '-o', 'OPTIONS', '/dev/sda3'],
+                stdout=-1, stderr=-1
+            )
+
+        ]
+        assert mock_os_system.call_args_list == [
+            call('/usr/sbin/growpart /dev/sda 3'),
+            call('btrfs filesystem resize max /')
         ]
 
     @patch('subprocess.Popen')
