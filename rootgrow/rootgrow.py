@@ -25,7 +25,7 @@ from rootgrow.resizefs import resize_fs
 
 def get_root_device():
     proc = subprocess.Popen(
-        ['findmnt', '-n', '-f', '-o', 'SOURCE', '/'],
+        ['findmnt', '-v', '-n', '-f', '-o', 'SOURCE', '/'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
