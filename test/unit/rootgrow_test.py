@@ -115,6 +115,26 @@ class TestRootGrow(unittest.TestCase):
             get_root_device()
 
     @patch('subprocess.Popen')
+    def test_get_root_device_root_in_snap(self, mock_subprocess_popen):
+        findmnt_mnt = Mock()
+        mock_subprocess_popen.return_value = findmnt_mnt
+        findmnt_mnt.communicate.return_value = (
+            b'/dev/sda3[/@/.snapshots/1/snapshot]',
+            b''
+        )
+        assert get_root_device() == '/dev/sda3'
+
+    @patch('subprocess.Popen')
+    def test_get_root_device_root_on_part(self, mock_subprocess_popen):
+        findmnt_mnt = Mock()
+        mock_subprocess_popen.return_value = findmnt_mnt
+        findmnt_mnt.communicate.return_value = (
+            b'/dev/sda1',
+            b''
+        )
+        assert get_root_device() == '/dev/sda1'
+
+    @patch('subprocess.Popen')
     def test_get_root_filesystem_type_error(self, mock_subprocess_popen):
         root_fs = Mock()
         mock_subprocess_popen.return_value = root_fs

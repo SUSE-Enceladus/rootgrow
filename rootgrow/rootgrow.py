@@ -35,7 +35,8 @@ def get_root_device():
         raise Exception(
             'Unable to determine root partition {}'.format(err_msg)
         )
-    return stdout_data.strip().decode()
+    root_dev_path = stdout_data.strip().decode()
+    return root_dev_path.split('[')[0]
 
 
 def get_root_filesystem_type(root_device):
